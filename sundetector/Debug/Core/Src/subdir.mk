@@ -5,7 +5,9 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Core/Src/DFRobot_queue.c \
 ../Core/Src/main.c \
+../Core/Src/rb.c \
 ../Core/Src/stm32l4xx_hal_msp.c \
 ../Core/Src/stm32l4xx_it.c \
 ../Core/Src/syscalls.c \
@@ -13,7 +15,9 @@ C_SRCS += \
 ../Core/Src/system_stm32l4xx.c 
 
 C_DEPS += \
+./Core/Src/DFRobot_queue.d \
 ./Core/Src/main.d \
+./Core/Src/rb.d \
 ./Core/Src/stm32l4xx_hal_msp.d \
 ./Core/Src/stm32l4xx_it.d \
 ./Core/Src/syscalls.d \
@@ -21,7 +25,9 @@ C_DEPS += \
 ./Core/Src/system_stm32l4xx.d 
 
 OBJS += \
+./Core/Src/DFRobot_queue.o \
 ./Core/Src/main.o \
+./Core/Src/rb.o \
 ./Core/Src/stm32l4xx_hal_msp.o \
 ./Core/Src/stm32l4xx_it.o \
 ./Core/Src/syscalls.o \

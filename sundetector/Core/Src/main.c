@@ -23,6 +23,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
+//#include "rb.h"
+#include "DFRobot_queue.h"
+//#include "DFRobot_wifi_iot.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +36,14 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define WIFISSID     "woo"
+#define WIFIPWS      "12345678"
+
+#define SERVER        "iot.dfrobot.com.cn"  //服务器地址
+#define PORT          "1883"                //端口号
+#define DEVICENAME    "rHpr0RcWR"           //用户名称
+#define DEVICESECRET  "9NtrAg5ZRz"          //用户登录密码
+#define TOPIC         "OSpwrHHMg"           //订阅频道
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,9 +58,13 @@ DMA_HandleTypeDef hdma_adc1;
 TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 volatile uint16_t uwADCxConvertedValue[4];
+
+//RingFifo_t gtUart2Fifo;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,6 +74,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -85,6 +102,226 @@ PUTCHAR_PROTOTYPE
 
   return ch;
 }
+char *splitdata[5];
+
+void splitString(void){
+	uint8_t count = 0;
+	static struct sQueueData *p = NULL;
+	p = cuappDequeue();
+	if(p != NULL){
+		splitdata[count] = strtok((char*)p->data, "|");
+		while(splitdata[count])
+		{
+			splitdata[++count] = strtok(NULL, "|");
+		}
+	}
+	free(p);
+}
+void mqtt(const char* url, const char *port, const char *iotid, const char *iotpwd , const char *topic)
+{
+
+	uint8_t state = 1;
+	uint8_t i,j,k;
+
+	char _mqtt[50];
+	char _topic[50];
+	strcat(_mqtt,"|4|1|1|");
+	strcat(_mqtt,url);
+	strcat(_mqtt,"|");
+	strcat(_mqtt,port);
+	strcat(_mqtt,"|");
+	strcat(_mqtt,iotid);
+	strcat(_mqtt,"|");
+	strcat(_mqtt,iotpwd);
+	strcat(_mqtt,"|\\r");
+	printf("%s\n",_mqtt);
+	for(k=0;k<50;k++)
+			HAL_UART_Transmit (&huart3, (uint8_t*) _mqtt+k, 1, 0xFFFF);
+	//Usart_SendStriong(USART3, _mqtt);
+	memset(_mqtt,'\0',50);
+	while(state == 1){
+		splitString();
+		if(strcmp("4",splitdata[0]) == 0){
+			if(strcmp("1",splitdata[2]) == 0){
+				if(strcmp("1",splitdata[3]) == 0){
+					state=0;
+				}else{
+					printf(".");
+				}
+			}
+		}else{
+			printf(".");
+		}
+		for(i=0; i<5; i++){
+			splitdata[i] = "\0";
+		}
+		HAL_Delay(100);
+	}
+	printf("MQTT Connect SUCCESS\n");
+	state=1;
+	strcat(_topic,"|4|1|2|");
+	strcat(_topic,topic);
+	strcat(_topic,"|\r");
+	printf("%s\n",_topic);
+	//HAL_UART_Transmit(&huart3, _topic, sizeof(_topic), 10);
+	//Usart_SendStriong(USART3, _topic);
+	for(j=0;j<50;j++)
+			HAL_UART_Transmit (&huart3, (uint8_t*) _topic+j, 1, 0xFFFF);
+	memset(_topic,'\0',50);
+	while(state == 1){
+		splitString();
+		if(strcmp("4",splitdata[0]) == 0){
+			if(strcmp("2",splitdata[2]) == 0){
+				if(strcmp("1",splitdata[3]) == 0){
+					state=0;
+				}else if(strcmp("1",splitdata[4]) == 0){
+					printf("Subscription limit reached");
+				}else if(strcmp("2",splitdata[4]) != 0){
+					printf("Subscription failed");
+				}else{
+					printf(".");
+				}
+		}else{
+			printf(".");
+			}
+		}
+		for(i=0; i<5; i++){
+			splitdata[i] = "\0";
+		}
+		HAL_Delay(100);
+	}
+	printf("Subscribe Topic SUCCESS\n");
+}
+void publish(const char *topic,const char *masag)
+{
+
+	uint8_t state = 1;
+	uint8_t i,j,k=0;
+	char _data[50];
+	strcat(_data,"|4|1|3|");
+	strcat(_data,topic);
+	strcat(_data,"|");
+	strcat(_data,masag);
+	strcat(_data,"|\r");
+	printf("%s\n",_data);
+	//HAL_UART_Transmit(&huart3, _data, sizeof(_data), 10);
+	for(k=0;k<50;k++)
+			HAL_UART_Transmit (&huart3, (uint8_t*) _data+k, 1, 0xFFFF);
+
+	while(state == 1){
+		splitString();
+		if(strcmp("4",splitdata[0]) == 0){
+			if(strcmp("3",splitdata[2]) == 0){
+				if(strcmp("1",splitdata[3]) == 0){
+					state=0;
+					printf("Successfully sent\n");
+				}else{
+					printf("Failed to send message\n");
+				}
+			}
+		}else if(j == (uint8_t)100){
+			printf("time out");
+			state = 0;
+		}
+		for(i=0; i<5; i++){
+			splitdata[i] = "\0";
+		}
+		j++;
+		HAL_Delay(100);
+	}
+	memset(_data,'\0',50);
+}
+void loop(void)
+{
+
+	uint8_t state = 1;
+	uint8_t i,j=0;
+
+	while(state == 1){
+		splitString();
+		if(strcmp("4",splitdata[0]) == 0){
+			if(strcmp("5",splitdata[2]) == 0){
+				state=0;
+				printf("topic:%s\n",splitdata[3]);
+				printf("massage:%s\n",splitdata[4]);
+			}
+		}else if(strcmp("3",splitdata[0]) == 0){
+			if(strcmp("200",splitdata[1]) == 0){
+				state=0;
+				printf("Sent successfully\n");
+				printf("massage:%s\n",splitdata[2]);
+			}else if(strcmp("-1",splitdata[1]) == 0){
+				printf("-1");
+			}else if(strcmp("1",splitdata[1]) == 0){
+				printf("1");
+			}
+		}else if(j == (uint8_t)100){
+			printf("time out");
+			state = 0;
+		}
+		for(i=0; i<5; i++){
+			splitdata[i] = "\0";
+		}
+		j++;
+		HAL_Delay(100);
+	}
+}
+
+void connectWifi(const char *ssid , const char *pwd)
+{
+
+	char _wifi[100] = "";
+	for(uint8_t m=0; m<5; m++){
+		splitdata[m] = "\0";
+	}
+	uint8_t state = 1;
+	uint8_t i;
+	uint8_t j;
+	uint8_t k;
+
+	strcat(_wifi,"|2|1|");
+	strcat(_wifi,ssid);
+	strcat(_wifi,",");
+	strcat(_wifi,pwd);
+	strcat(_wifi,"|\r");
+	printf("%s\n",_wifi);
+	//HAL_UART_Transmit(&huart3,_wifi,sizeof(_wifi),10);
+	//USART2TransferCompleted = 0;
+	//HAL_UART_Transmit(&huart2,_wifi,100,10);
+
+	for(j=0;j<50;j++)
+		HAL_UART_Transmit (&huart3, (uint8_t*) _wifi+j, 1, 0xFFFF);
+
+	//while(!USART2TransferCompleted);
+	//Usart_SendString(USART3, _wifi);
+	memset(_wifi,'\0',50);
+
+
+	while(state == 1){
+		splitString();
+		if(strcmp("2",splitdata[0]) == 0){
+			if(strcmp("3",splitdata[1]) == 0){
+				state=0;
+			}else{
+				printf(".");
+			}
+		}else{
+		printf(".");
+		}
+		for(i=0; i<5; i++){
+			splitdata[i] = "\0";
+		}
+		HAL_Delay(100);
+	}
+
+	for(k=0;k<5;k++){
+		printf(".");
+		HAL_Delay(1000);
+	}
+
+	printf("Wifi Connect SUCCESS\n");
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -119,9 +356,18 @@ int main(void)
   MX_TIM4_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
+  MX_USART3_UART_Init();
+
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  __HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
+  /*
+  if (RB_init (&gtUart2Fifo, 16)) // buffer size is power of 2
+    {
+      //assert(0);
+    }
+    */
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -137,8 +383,24 @@ int main(void)
 	   	{
 	  	  Error_Handler ();
 	   	}
+  //uint8_t ch;
+
+  connectWifi(WIFISSID,WIFIPWS);
+  mqtt(SERVER,PORT,DEVICENAME,DEVICESECRET,TOPIC);
   while (1)
   {
+	  publish(TOPIC,"HI TANG");
+	  loop();
+	  /*
+	  if (!RB_isempty (&gtUart2Fifo))
+	  {
+		  ch = RB_read (&gtUart2Fifo);
+	      HAL_UART_Transmit (&huart2, &ch, 1, 0xFF);
+	  }
+	  */
+	  printf("hello world\n");
+	  //HAL_UART_Transmit(&huart3, "hello world\n", sizeof("hello world\n"), 10);
+	  HAL_Delay(1000);
 
 	  	  /*
 		 printf ("CDS1=%4d, CDS2=%4d ", uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
@@ -398,7 +660,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -414,6 +676,41 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART3_Init 0 */
+
+  /* USER CODE END USART3_Init 0 */
+
+  /* USER CODE BEGIN USART3_Init 1 */
+
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 9600;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
+
+  /* USER CODE END USART3_Init 2 */
 
 }
 
@@ -467,6 +764,18 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/*
+void
+HAL_UART_RxCpltCallback (UART_HandleTypeDef *UartHandle)
+{
+  uint8_t rx;
+
+  if (UartHandle->Instance == USART2)
+    {
+      rx = (uint8_t) (UartHandle->Instance->RDR & (uint8_t) 0x00FF);
+      RB_write (&gtUart2Fifo, rx);
+    }
+}*/
 
 /* USER CODE END 4 */
 

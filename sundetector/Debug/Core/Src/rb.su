@@ -1,0 +1,7 @@
+rb.c:21:1:RB_init	16	static
+rb.c:38:1:RB_clear	16	static
+rb.c:46:1:RB_write	16	static
+rb.c:56:1:RB_read	24	static
+rb.c:66:1:RB_isempty	16	static
+rb.c:72:1:RB_isfull	16	static
+rb.c:78:1:RB_count	16	static
