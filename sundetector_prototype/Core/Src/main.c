@@ -50,8 +50,7 @@ TIM_HandleTypeDef htim4;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-volatile uint16_t uwADCxConvertedValue[4];
-uint16_t ADC_Last_value[4];
+volatile uint16_t uwADCxConvertedValue[8];
 uint16_t ADC_AVG_value[4];
 volatile int gTimerCnt;
 uint16_t Lf_Rt_pos=1750;
@@ -149,7 +148,7 @@ int main(void)
   }
 
   //dma_adc
-  if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&uwADCxConvertedValue, 4)!=HAL_OK)
+  if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&uwADCxConvertedValue, 8)!=HAL_OK)
   {
 	  Error_Handler ();
   }
@@ -159,19 +158,14 @@ int main(void)
   while (1)
   {
 
-	  for(i=0;i<4;++i)
-	  {
-		  ADC_Last_value[i]=uwADCxConvertedValue[i];
-	  }
-
 	  //80MHz = 80000cycle/ms
-	  //92.5cycle*4=370cycle
-	  //800000 > 370 -> enough
+	  //92.5cycle*8=740cycle
+	  //800000 > 740 -> enough
 	  HAL_Delay(10);
 
 	  for(i=0;i<4;++i)
 	  {
-		  ADC_AVG_value[i] = Devide_by2(ADC_Last_value[i],uwADCxConvertedValue[i]);
+		  ADC_AVG_value[i] = Devide_by2(uwADCxConvertedValue[i],uwADCxConvertedValue[i+4]);
 	  }
 
 	  uint16_t top = ADC_AVG_value[0] + ADC_AVG_value[2];
@@ -187,11 +181,12 @@ int main(void)
 		  //going up
 		  Tp_Dn_pos =+ 10*ud;
 	  }
-	  else
+	  else if(top > bottom)
 	  {
 		  //going down
 		  Tp_Dn_pos =- 10*ud;
 	  }
+	  else;
 
 
 	  if(left < right)
@@ -199,12 +194,12 @@ int main(void)
 		  //going left
 		  Lf_Rt_pos =+ 10*rl;
 	  }
-	  else
+	  else if(left > right)
 	  {
 		  //going right
 		  Lf_Rt_pos =- 10*rl;
 	  }
-
+	  else ;
 
 	  if(Lf_Rt_pos>2400)
 		  Lf_Rt_pos=2400;
@@ -216,9 +211,9 @@ int main(void)
 		  Tp_Dn_pos=1300;
 
 
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
-	  HAL_Delay(1000);
+	  //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
+	  //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
+	  HAL_Delay(100);
 
     /* USER CODE END WHILE */
 
@@ -302,7 +297,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.ContinuousConvMode = ENABLE;
-  hadc1.Init.NbrOfConversion = 4;
+  hadc1.Init.NbrOfConversion = 8;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
@@ -352,6 +347,38 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_REGULAR_RANK_4;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = ADC_REGULAR_RANK_5;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_2;
+  sConfig.Rank = ADC_REGULAR_RANK_6;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Rank = ADC_REGULAR_RANK_7;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Rank = ADC_REGULAR_RANK_8;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -559,12 +586,19 @@ void
 HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	gTimerCnt++;
-	if(gTimerCnt == 1000)
+	//same as HAL_Delay(100)
+	if(gTimerCnt == 100)
 	{
 		gTimerCnt = 0;
+		uint16_t cds1 = Apsolute_Val(uwADCxConvertedValue[0],uwADCxConvertedValue[4]);
+		uint16_t cds2 = Apsolute_Val(uwADCxConvertedValue[1],uwADCxConvertedValue[5]);
+		uint16_t cds3 = Apsolute_Val(uwADCxConvertedValue[2],uwADCxConvertedValue[6]);
+		uint16_t cds4 = Apsolute_Val(uwADCxConvertedValue[3],uwADCxConvertedValue[7]);
 		printf ("Lf_Rt_pos=%4d, Tp_Dn_pos=%4d, ", Lf_Rt_pos,Tp_Dn_pos);
-		printf ("CDS1=%4d, CDS2=%4d ", uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
+		printf ("Normal : CDS1=%4d, CDS2=%4d ", uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
 		printf ("CDS3=%4d, CDS4=%4d\n", uwADCxConvertedValue[2],uwADCxConvertedValue[3]);
+		printf ("Dffir : CDS1=%4d, CDS2=%4d ", cds1,cds2);
+		printf ("CDS3=%4d, CDS4=%4d\n", cds3,cds4);
 	}
 }
 /* USER CODE END 4 */
