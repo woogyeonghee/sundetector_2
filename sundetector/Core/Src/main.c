@@ -24,7 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
-//#include "rb.h"
+#include "rb.h"
 #include "DFRobot_queue.h"
 //#include "DFRobot_wifi_iot.h"
 /* USER CODE END Includes */
@@ -63,7 +63,7 @@ UART_HandleTypeDef huart3;
 /* USER CODE BEGIN PV */
 volatile uint16_t uwADCxConvertedValue[4];
 
-//RingFifo_t gtUart2Fifo;
+RingFifo_t gtUart2Fifo;
 
 /* USER CODE END PV */
 
@@ -102,8 +102,8 @@ PUTCHAR_PROTOTYPE
 
   return ch;
 }
-char *splitdata[5];
 
+char *splitdata[5];
 void splitString(void){
 	uint8_t count = 0;
 	static struct sQueueData *p = NULL;
@@ -271,14 +271,12 @@ void connectWifi(const char *ssid , const char *pwd)
 {
 
 	char _wifi[100] = "";
-	for(uint8_t m=0; m<5; m++){
-		splitdata[m] = "\0";
-	}
+
 	uint8_t state = 1;
 	uint8_t i;
 	uint8_t j;
 	uint8_t k;
-
+	uint8_t ch;
 	strcat(_wifi,"|2|1|");
 	strcat(_wifi,ssid);
 	strcat(_wifi,",");
@@ -295,12 +293,18 @@ void connectWifi(const char *ssid , const char *pwd)
 	//while(!USART2TransferCompleted);
 	//Usart_SendString(USART3, _wifi);
 	memset(_wifi,'\0',50);
-
-
+	while(1){
+	  if (!RB_isempty (&gtUart2Fifo))
+	  {
+		  ch = RB_read (&gtUart2Fifo);
+	      HAL_UART_Transmit (&huart2, &ch, 1, 0xFF);
+	  }
+	}
 	while(state == 1){
 		splitString();
+
 		if(strcmp("2",splitdata[0]) == 0){
-			if(strcmp("3",splitdata[1]) == 0){
+			if(strcmp("1",splitdata[1]) == 0){/*"3*/
 				state=0;
 			}else{
 				printf(".");
@@ -386,11 +390,11 @@ int main(void)
   //uint8_t ch;
 
   connectWifi(WIFISSID,WIFIPWS);
-  mqtt(SERVER,PORT,DEVICENAME,DEVICESECRET,TOPIC);
+  //mqtt(SERVER,PORT,DEVICENAME,DEVICESECRET,TOPIC);
   while (1)
   {
-	  publish(TOPIC,"HI TANG");
-	  loop();
+	  //publish(TOPIC,"HI TANG");
+	  //loop();
 	  /*
 	  if (!RB_isempty (&gtUart2Fifo))
 	  {
@@ -764,18 +768,18 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/*
+
 void
 HAL_UART_RxCpltCallback (UART_HandleTypeDef *UartHandle)
 {
   uint8_t rx;
 
-  if (UartHandle->Instance == USART2)
+  if (UartHandle->Instance == USART3)
     {
       rx = (uint8_t) (UartHandle->Instance->RDR & (uint8_t) 0x00FF);
       RB_write (&gtUart2Fifo, rx);
     }
-}*/
+}
 
 /* USER CODE END 4 */
 

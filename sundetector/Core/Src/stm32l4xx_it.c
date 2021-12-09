@@ -21,6 +21,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32l4xx_it.h"
+#include "DFRobot_queue.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
@@ -32,7 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RX_BUF_MAX_LEN  			200
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,6 +44,9 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 
+char Data_RX_BUF[RX_BUF_MAX_LEN];
+uint8_t readstate = 0;
+static uint8_t Index = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -236,11 +240,24 @@ void TIM4_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
+	/*
+	uint8_t r;
+
+	if(__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE) != RESET)  //接收中断
+	{
+		r =(uint8_t) (huart2.Instance->RDR & (uint8_t) 0x00FF);//(USART1->DR);	//读取接收到的数据
+		HAL_UART_Transmit (&huart2, &r, 1, 0xFFFF);
+		while(__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE) != SET);
+	}
+	__HAL_UART_CLEAR_PEFLAG(&huart2);
+	*/
+	/*
 	if ((__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE) != RESET) && (__HAL_UART_GET_IT_SOURCE(&huart2, UART_IT_RXNE) != RESET))
 	{
 		HAL_UART_RxCpltCallback (&huart2);
 	    __HAL_UART_CLEAR_PEFLAG(&huart2);
 	}
+	*/
   /* USER CODE END USART2_IRQn 0 */
   /* USER CODE BEGIN USART2_IRQn 1 */
 
@@ -253,6 +270,29 @@ void USART2_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
+	/*
+	if(__HAL_UART_GET_FLAG(&huart3, UART_IT_RXNE) != RESET)  //接收中断
+	{
+		Data_RX_BUF[Index] = (uint8_t) (huart3.Instance->RDR & (uint8_t) 0x00FF);
+		if(Data_RX_BUF[Index] == '\r'){
+			cuappEnqueue((uint8_t*)Data_RX_BUF,Index, 0);
+			Index = 0;
+			return;
+		}
+		if((Index == 100)&(Data_RX_BUF[Index] != '\r')){
+			Index = 0;
+			return;
+		}
+		Index++;
+	}
+	__HAL_UART_CLEAR_PEFLAG(&huart3);
+	*/
+
+	if ((__HAL_UART_GET_FLAG(&huart3, UART_FLAG_RXNE) != RESET) && (__HAL_UART_GET_IT_SOURCE(&huart3, UART_IT_RXNE) != RESET))
+	{
+		HAL_UART_RxCpltCallback (&huart3);
+	    __HAL_UART_CLEAR_PEFLAG(&huart3);
+	}
 
   /* USER CODE END USART3_IRQn 0 */
   /* USER CODE BEGIN USART3_IRQn 1 */
