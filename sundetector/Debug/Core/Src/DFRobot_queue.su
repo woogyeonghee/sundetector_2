@@ -1,4 +1,0 @@
-DFRobot_queue.c:8:6:cuappEnqueue	24	static
-DFRobot_queue.c:28:20:cuappDequeue	16	static
-DFRobot_queue.c:37:20:getQueueTail	16	static
-DFRobot_queue.c:43:20:getQueueHead	16	static
