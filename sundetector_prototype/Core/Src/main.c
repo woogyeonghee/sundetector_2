@@ -52,6 +52,7 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 volatile uint16_t uwADCxConvertedValue[4];
 uint16_t ADC_Last_value[4];
+uint16_t ADC_AVG_value[4];
 volatile int gTimerCnt;
 uint16_t Lf_Rt_pos=1750;
 uint16_t Tp_Dn_pos=1750;
@@ -163,47 +164,46 @@ int main(void)
 		  ADC_Last_value[i]=uwADCxConvertedValue[i];
 	  }
 
-	  //top
-	  uint16_t last_top=Devide_by2(ADC_Last_value[0],ADC_Last_value[2]);
-	  //bottom
-	  uint16_t last_bottom=Devide_by2(ADC_Last_value[1],ADC_Last_value[3]);
-	  //left
-	  uint16_t last_left=Devide_by2(ADC_Last_value[0],ADC_Last_value[1]);
-	  //right
-	  uint16_t last_right=Devide_by2(ADC_Last_value[2],ADC_Last_value[3]);
-		 //printf ("A : CDS1=%4d, CDS2=%4d ", ADC_Last_value[0],ADC_Last_value[1]);
-		 //printf ("CDS3=%4d, CDS4=%4d\n", ADC_Last_value[2],ADC_Last_value[3]);
 	  //80MHz = 80000cycle/ms
 	  //92.5cycle*4=370cycle
-	  HAL_Delay (10);
+	  //800000 > 370 -> enough
+	  HAL_Delay(10);
 
-	  //top
-	  uint16_t top=Devide_by2(uwADCxConvertedValue[0],uwADCxConvertedValue[2]);
-	  //bottom
-	  uint16_t bottom=Devide_by2(uwADCxConvertedValue[1],uwADCxConvertedValue[3]);
-	  //left
-	  uint16_t left=Devide_by2(uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
-	  //right
-	  uint16_t right=Devide_by2(uwADCxConvertedValue[2],uwADCxConvertedValue[3]);
-		 //printf ("B : CDS1=%4d, CDS2=%4d ", ADC_Last_value[0],ADC_Last_value[1]);
-		 //printf ("CDS3=%4d, CDS4=%4d\n", ADC_Last_value[2],ADC_Last_value[3]);
-	  //uint16_t top_and_last = Apsolute(top,last_top);
-	  //printf ("topandlast=%4d" ,top_and_last);
-
-
-		  //going up
-	  if(Apsolute(top,last_top) < Apsolute(bottom,last_bottom))
+	  for(i=0;i<4;++i)
 	  {
-		  Tp_Dn_pos =+ 100;
+		  ADC_AVG_value[i] = Devide_by2(ADC_Last_value[i],uwADCxConvertedValue[i]);
 	  }
-	  else  //going down
-		  Tp_Dn_pos =- 100;
 
-	  	  //going left
-	  if(Apsolute(left,last_left) < Apsolute(right,last_right))
-		  Lf_Rt_pos =+ 100;
-	  else //going right
-		  Lf_Rt_pos =- 100;
+	  uint16_t top = ADC_AVG_value[0] + ADC_AVG_value[2];
+	  uint16_t bottom = ADC_AVG_value[1] + ADC_AVG_value[3];
+	  uint16_t left = ADC_AVG_value[0] + ADC_AVG_value[1];
+	  uint16_t right = ADC_AVG_value[2] + ADC_AVG_value[3];
+
+	  uint16_t ud = Apsolute_Val(top,bottom);
+	  uint16_t rl = Apsolute_Val(left, right);
+
+	  if(top < bottom)
+	  {
+		  //going up
+		  Tp_Dn_pos =+ 10*ud;
+	  }
+	  else
+	  {
+		  //going down
+		  Tp_Dn_pos =- 10*ud;
+	  }
+
+
+	  if(left < right)
+	  {
+		  //going left
+		  Lf_Rt_pos =+ 10*rl;
+	  }
+	  else
+	  {
+		  //going right
+		  Lf_Rt_pos =- 10*rl;
+	  }
 
 
 	  if(Lf_Rt_pos>2400)
@@ -215,11 +215,11 @@ int main(void)
 	  if(Tp_Dn_pos<1300)
 		  Tp_Dn_pos=1300;
 
+
 	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
 	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
 	  HAL_Delay(1000);
 
-	  //printf ("Lf_Rt_pos=%4d, Tp_Dn_pos=%4d\n", Lf_Rt_pos,Tp_Dn_pos);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -562,7 +562,9 @@ HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(gTimerCnt == 1000)
 	{
 		gTimerCnt = 0;
-		printf ("Lf_Rt_pos=%4d, Tp_Dn_pos=%4d\n", Lf_Rt_pos,Tp_Dn_pos);
+		printf ("Lf_Rt_pos=%4d, Tp_Dn_pos=%4d, ", Lf_Rt_pos,Tp_Dn_pos);
+		printf ("CDS1=%4d, CDS2=%4d ", uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
+		printf ("CDS3=%4d, CDS4=%4d\n", uwADCxConvertedValue[2],uwADCxConvertedValue[3]);
 	}
 }
 /* USER CODE END 4 */
