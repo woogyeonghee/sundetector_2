@@ -106,7 +106,7 @@ sundetector
 
 # FLOWCHART(main func)
 
-
+![firmware](https://user-images.githubusercontent.com/88933098/145672908-c09fea04-3f48-4a24-ab5a-a697f307eb43.png)
 
 # board setting
 
