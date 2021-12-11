@@ -32,7 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RX_BUF_MAX_LEN  			200
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,6 +42,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+static uint8_t Index = 0;
+char Data_RX_BUF[RX_BUF_MAX_LEN];
 
 /* USER CODE END PV */
 
@@ -59,6 +61,7 @@
 extern DMA_HandleTypeDef hdma_adc1;
 extern ADC_HandleTypeDef hadc1;
 extern TIM_HandleTypeDef htim3;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -241,6 +244,55 @@ void TIM3_IRQHandler(void)
   /* USER CODE BEGIN TIM3_IRQn 1 */
 
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+	uint8_t r;
+
+	if(((LL_USART_IsEnabledIT_RXNE(USART2))&& (LL_USART_IsActiveFlag_RXNE(USART2))) != RESET)  //?é•?î∂‰∏??ñ≠
+	{
+		r =LL_USART_ReceiveData9(USART2);//(USART1->DR);	//ËØªÂèñ?é•?î∂?à∞?öÑ?ï∞?çÆ
+		LL_USART_TransmitData9(USART2, r);
+		while(LL_USART_IsActiveFlag_TC(USART2) != SET);
+	}
+	LL_USART_ClearFlag_TC(USART2);
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART4 global interrupt.
+  */
+void UART4_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART4_IRQn 0 */
+	if(((LL_USART_IsEnabledIT_RXNE(UART4))&& (LL_USART_IsActiveFlag_RXNE(UART4))) != RESET)
+	{
+		Data_RX_BUF[Index] = LL_USART_ReceiveData9(UART4);
+		if(Data_RX_BUF[Index] == '\r'){
+			cuappEnqueue((uint8_t*)Data_RX_BUF,Index, 0);
+			Index = 0;
+			return;
+		}
+		if((Index == 100) & (Data_RX_BUF[Index] != '\r')){
+			Index = 0;
+			return;
+		}
+		Index++;
+	}
+	LL_USART_ClearFlag_TC(USART2);
+  /* USER CODE END UART4_IRQn 0 */
+  /* USER CODE BEGIN UART4_IRQn 1 */
+
+  /* USER CODE END UART4_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "cal.h"
+#include "DFRobot_wifi_iot.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +34,17 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+//wifi
+#define WIFISSID     "woo"
+#define WIFIPWS      "12345678"
+
+
+#define SERVER        "iot.dfrobot.com.cn"  //?��?��?��?��??
+#define PORT          "1883"                //�??��?��
+#define DEVICENAME    "rHpr0RcWR"           //?��?��?���?
+#define DEVICESECRET  "9NtrAg5ZRz"          //?��?��?��录密?��
+#define TOPIC         "OSpwrHHMg"           //�??��频道
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,11 +62,12 @@ TIM_HandleTypeDef htim4;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-volatile uint16_t uwADCxConvertedValue[8];
-uint16_t ADC_AVG_value[4];
-volatile int gTimerCnt;
+volatile uint16_t uwADCxConvertedValue[4];
 uint16_t Lf_Rt_pos=1750;
 uint16_t Tp_Dn_pos=1750;
+uint16_t ADC_NOW_value[4];
+volatile int gTimerCnt;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +78,7 @@ static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_UART4_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -102,7 +116,6 @@ PUTCHAR_PROTOTYPE
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -128,6 +141,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM4_Init();
   MX_TIM3_Init();
+  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
@@ -148,73 +162,80 @@ int main(void)
   }
 
   //dma_adc
-  if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&uwADCxConvertedValue, 8)!=HAL_OK)
+  if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&uwADCxConvertedValue, 4)!=HAL_OK)
   {
 	  Error_Handler ();
   }
+  connectWifi(WIFISSID,WIFIPWS);
+  mqtt(SERVER,PORT,DEVICENAME,DEVICESECRET,TOPIC);
 
-
-  uint8_t i;
   while (1)
   {
+	  const uint8_t Add_pos = 50;
+	  const uint8_t tol =50;
 
-	  //80MHz = 80000cycle/ms
-	  //92.5cycle*8=740cycle
-	  //800000 > 740 -> enough
-	  HAL_Delay(10);
+	  ADC_NOW_value[0] = Sensor_cal1(uwADCxConvertedValue[0]);
+	  ADC_NOW_value[1] = Sensor_cal2(uwADCxConvertedValue[1]);
+	  ADC_NOW_value[2] = uwADCxConvertedValue[2];
+	  ADC_NOW_value[3] = uwADCxConvertedValue[3];
 
-	  for(i=0;i<4;++i)
-	  {
-		  ADC_AVG_value[i] = Devide_by2(uwADCxConvertedValue[i],uwADCxConvertedValue[i+4]);
-	  }
 
-	  uint16_t top = ADC_AVG_value[0] + ADC_AVG_value[2];
-	  uint16_t bottom = ADC_AVG_value[1] + ADC_AVG_value[3];
-	  uint16_t left = ADC_AVG_value[0] + ADC_AVG_value[1];
-	  uint16_t right = ADC_AVG_value[2] + ADC_AVG_value[3];
+
+
+	  uint16_t top = Devide_by2(ADC_NOW_value[0] , ADC_NOW_value[2]);
+	  uint16_t bottom = Devide_by2(ADC_NOW_value[1] , ADC_NOW_value[3]);
+	  uint16_t left = Devide_by2(ADC_NOW_value[0] , ADC_NOW_value[1]);
+	  uint16_t right = Devide_by2(ADC_NOW_value[2] , ADC_NOW_value[3]);
+
 
 	  uint16_t ud = Apsolute_Val(top,bottom);
 	  uint16_t rl = Apsolute_Val(left, right);
 
-	  if(top < bottom)
+	  if(ud>tol)
 	  {
-		  //going up
-		  Tp_Dn_pos =+ 10*ud;
+		  if(left>right)
+		  {
+			  Lf_Rt_pos=Lf_Rt_pos+Add_pos;
+		  }
+		  else if(left<right)
+		  {
+			  Lf_Rt_pos=Lf_Rt_pos-Add_pos;
+		  }
 	  }
-	  else if(top > bottom)
+	  if(rl>tol)
 	  {
-		  //going down
-		  Tp_Dn_pos =- 10*ud;
+		  if(top>bottom)
+		  {
+			  Tp_Dn_pos=Tp_Dn_pos-Add_pos;
+		  }
+		  else if(top<bottom)
+		  {
+			  Tp_Dn_pos=Tp_Dn_pos+Add_pos;
+		  }
 	  }
-	  else;
 
 
-	  if(left < right)
-	  {
-		  //going left
-		  Lf_Rt_pos =+ 10*rl;
-	  }
-	  else if(left > right)
-	  {
-		  //going right
-		  Lf_Rt_pos =- 10*rl;
-	  }
-	  else ;
 
-	  if(Lf_Rt_pos>2400)
+	  if(Lf_Rt_pos>2400)//right
+	  {
 		  Lf_Rt_pos=2400;
+	  }
 	  if(Lf_Rt_pos<1400)
+	  {
 		  Lf_Rt_pos=1400;
-	  if(Tp_Dn_pos>2250)
+	  }
+	  if(Tp_Dn_pos>2250)//up
+	  {
 		  Tp_Dn_pos=2250;
+	  }
 	  if(Tp_Dn_pos<1300)
+	  {
 		  Tp_Dn_pos=1300;
+	  }
 
-
-	  //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
-	  //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
-	  HAL_Delay(100);
-
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
+	  HAL_Delay(50);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -297,7 +318,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.ContinuousConvMode = ENABLE;
-  hadc1.Init.NbrOfConversion = 8;
+  hadc1.Init.NbrOfConversion = 4;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
@@ -347,38 +368,6 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_REGULAR_RANK_4;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_1;
-  sConfig.Rank = ADC_REGULAR_RANK_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_2;
-  sConfig.Rank = ADC_REGULAR_RANK_6;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_3;
-  sConfig.Rank = ADC_REGULAR_RANK_7;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_4;
-  sConfig.Rank = ADC_REGULAR_RANK_8;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -498,6 +487,71 @@ static void MX_TIM4_Init(void)
 }
 
 /**
+  * @brief UART4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART4_Init(void)
+{
+
+  /* USER CODE BEGIN UART4_Init 0 */
+
+  /* USER CODE END UART4_Init 0 */
+
+  LL_USART_InitTypeDef UART_InitStruct = {0};
+
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+  /** Initializes the peripherals clock
+  */
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_UART4;
+  PeriphClkInit.Uart4ClockSelection = RCC_UART4CLKSOURCE_PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* Peripheral clock enable */
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_UART4);
+
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
+  /**UART4 GPIO Configuration
+  PA0   ------> UART4_TX
+  PA1   ------> UART4_RX
+  */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_0|LL_GPIO_PIN_1;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_8;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* UART4 interrupt Init */
+  NVIC_SetPriority(UART4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(UART4_IRQn);
+
+  /* USER CODE BEGIN UART4_Init 1 */
+
+  /* USER CODE END UART4_Init 1 */
+  UART_InitStruct.BaudRate = 9600;
+  UART_InitStruct.DataWidth = LL_USART_DATAWIDTH_8B;
+  UART_InitStruct.StopBits = LL_USART_STOPBITS_1;
+  UART_InitStruct.Parity = LL_USART_PARITY_NONE;
+  UART_InitStruct.TransferDirection = LL_USART_DIRECTION_TX_RX;
+  UART_InitStruct.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
+  UART_InitStruct.OverSampling = LL_USART_OVERSAMPLING_16;
+  LL_USART_Init(UART4, &UART_InitStruct);
+  LL_USART_ConfigAsyncMode(UART4);
+  LL_USART_Enable(UART4);
+  /* USER CODE BEGIN UART4_Init 2 */
+
+  /* USER CODE END UART4_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -513,7 +567,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -587,18 +641,14 @@ HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	gTimerCnt++;
 	//same as HAL_Delay(100)
-	if(gTimerCnt == 100)
+	if(gTimerCnt == 1000)
 	{
+		publish(TOPIC,"HI TANG");
 		gTimerCnt = 0;
-		uint16_t cds1 = Apsolute_Val(uwADCxConvertedValue[0],uwADCxConvertedValue[4]);
-		uint16_t cds2 = Apsolute_Val(uwADCxConvertedValue[1],uwADCxConvertedValue[5]);
-		uint16_t cds3 = Apsolute_Val(uwADCxConvertedValue[2],uwADCxConvertedValue[6]);
-		uint16_t cds4 = Apsolute_Val(uwADCxConvertedValue[3],uwADCxConvertedValue[7]);
 		printf ("Lf_Rt_pos=%4d, Tp_Dn_pos=%4d, ", Lf_Rt_pos,Tp_Dn_pos);
-		printf ("Normal : CDS1=%4d, CDS2=%4d ", uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
+		printf ("CDS1=%4d, CDS2=%4d, ", uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
 		printf ("CDS3=%4d, CDS4=%4d\n", uwADCxConvertedValue[2],uwADCxConvertedValue[3]);
-		printf ("Dffir : CDS1=%4d, CDS2=%4d ", cds1,cds2);
-		printf ("CDS3=%4d, CDS4=%4d\n", cds3,cds4);
+		loop();
 	}
 }
 /* USER CODE END 4 */
