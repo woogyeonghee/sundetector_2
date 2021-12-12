@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include "cal.h"
 #include "DFRobot_wifi_iot.h"
+#include "DFRobot_queue.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,11 +40,12 @@
 #define WIFIPWS      "12345678"
 
 
-#define SERVER        "iot.dfrobot.com.cn"  //?��?��?��?��??
-#define PORT          "1883"                //�??��?��
-#define DEVICENAME    "rHpr0RcWR"           //?��?��?���?
-#define DEVICESECRET  "9NtrAg5ZRz"          //?��?��?��录密?��
-#define TOPIC         "OSpwrHHMg"           //�??��频道
+//#define SERVER        "192.168.203.131"
+#define SERVER		  "iot.dfrobot.com.cn"
+#define PORT          "1883"
+#define DEVICENAME    "K6q3Gl2nR"
+#define DEVICESECRET  "Ke33Glh7Rz"
+#define TOPIC         "uEjeMl2nR"
 
 /* USER CODE END PD */
 
@@ -60,6 +62,7 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 volatile uint16_t uwADCxConvertedValue[4];
@@ -67,7 +70,6 @@ uint16_t Lf_Rt_pos=1750;
 uint16_t Tp_Dn_pos=1750;
 uint16_t ADC_NOW_value[4];
 volatile int gTimerCnt;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,6 +80,7 @@ static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_USART3_UART_Init(void);
 static void MX_UART4_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -141,20 +144,27 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM4_Init();
   MX_TIM3_Init();
+  MX_USART3_UART_Init();
   MX_UART4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  __HAL_UART_ENABLE_IT(&huart2,UART_IT_RXNE);
+  __HAL_UART_ENABLE_IT(&huart3,UART_IT_RXNE);
+
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  connectWifi(WIFISSID,WIFIPWS);
+  http();
+  mqtt(SERVER,PORT,DEVICENAME,DEVICESECRET,TOPIC);
 
   if(HAL_TIM_Base_Start_IT(&htim3)!=HAL_OK)
   {
 	  Error_Handler();
   }
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-
   //calibration_adc
   if (HAL_ADCEx_Calibration_Start (&hadc1,10) != HAL_OK)
   {
@@ -166,8 +176,9 @@ int main(void)
   {
 	  Error_Handler ();
   }
-  connectWifi(WIFISSID,WIFIPWS);
-  mqtt(SERVER,PORT,DEVICENAME,DEVICESECRET,TOPIC);
+
+
+
 
   while (1)
   {
@@ -178,9 +189,6 @@ int main(void)
 	  ADC_NOW_value[1] = Sensor_cal2(uwADCxConvertedValue[1]);
 	  ADC_NOW_value[2] = uwADCxConvertedValue[2];
 	  ADC_NOW_value[3] = uwADCxConvertedValue[3];
-
-
-
 
 	  uint16_t top = Devide_by2(ADC_NOW_value[0] , ADC_NOW_value[2]);
 	  uint16_t bottom = Devide_by2(ADC_NOW_value[1] , ADC_NOW_value[3]);
@@ -232,9 +240,9 @@ int main(void)
 	  {
 		  Tp_Dn_pos=1300;
 	  }
-
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
+	  //printf ("hi\n ", Lf_Rt_pos,Tp_Dn_pos);
+	  //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
+	  //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
 	  HAL_Delay(50);
     /* USER CODE END WHILE */
 
@@ -528,14 +536,10 @@ static void MX_UART4_Init(void)
   GPIO_InitStruct.Alternate = LL_GPIO_AF_8;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* UART4 interrupt Init */
-  NVIC_SetPriority(UART4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
-  NVIC_EnableIRQ(UART4_IRQn);
-
   /* USER CODE BEGIN UART4_Init 1 */
 
   /* USER CODE END UART4_Init 1 */
-  UART_InitStruct.BaudRate = 9600;
+  UART_InitStruct.BaudRate = 115200;
   UART_InitStruct.DataWidth = LL_USART_DATAWIDTH_8B;
   UART_InitStruct.StopBits = LL_USART_STOPBITS_1;
   UART_InitStruct.Parity = LL_USART_PARITY_NONE;
@@ -583,6 +587,41 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART3_Init 0 */
+
+  /* USER CODE END USART3_Init 0 */
+
+  /* USER CODE BEGIN USART3_Init 1 */
+
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 9600;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
+
+  /* USER CODE END USART3_Init 2 */
 
 }
 

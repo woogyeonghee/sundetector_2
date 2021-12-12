@@ -14,6 +14,29 @@ void Usart_SendString1(USART_TypeDef* USARTx, char *str)
 	}
 }
 
+void http()
+{
+	uint8_t i;
+	char _http[500];
+	strcat(_http,"|3|2|");
+	strcat(_http,"http://192.168.203.23:8080/");
+	strcat(_http,",");
+	strcat(_http,"hello");
+	strcat(_http,"|\r");
+	printf("%s\n",_http);
+	Usart_SendString1(USART3, _http);
+	while(1)
+	{
+		splitString();
+		printf("%c,%c,%c,%c,%c\n",*(splitdata[0]),*(splitdata[1]),*(splitdata[2]),*(splitdata[3]),*(splitdata[4]));
+		for(i=0; i<5; i++)
+		{
+			splitdata[i] = "\0";
+		}
+		HAL_Delay(100);
+	}
+}
+
 void mqtt(const char* url, const char *port, const char *iotid, const char *iotpwd , const char *topic)
 {
 	uint8_t state = 1;
@@ -29,9 +52,9 @@ void mqtt(const char* url, const char *port, const char *iotid, const char *iotp
 	strcat(_mqtt,iotid);
 	strcat(_mqtt,"|");
 	strcat(_mqtt,iotpwd);
-	strcat(_mqtt,"|\\r");
+	strcat(_mqtt,"|\r");
 	printf("%s\n",_mqtt);
-	Usart_SendString1(UART4, _mqtt);
+	Usart_SendString1(USART3, _mqtt);
 	memset(_mqtt,'\0',50);
 	while(state == 1){
 		splitString();
@@ -52,15 +75,18 @@ void mqtt(const char* url, const char *port, const char *iotid, const char *iotp
 		HAL_Delay(100);
 	}
 	printf("MQTT Connect SUCCESS\n");
+
 	state=1;
 	strcat(_topic,"|4|1|2|");
 	strcat(_topic,topic);
 	strcat(_topic,"|\r");
 	printf("%s\n",_topic);
-	Usart_SendString1(UART4, _topic);
+	Usart_SendString1(USART3, _topic);
 	memset(_topic,'\0',50);
 	while(state == 1){
 		splitString();
+
+
 		if(strcmp("4",splitdata[0]) == 0){
 			if(strcmp("2",splitdata[2]) == 0){
 				if(strcmp("1",splitdata[3]) == 0){
@@ -76,12 +102,14 @@ void mqtt(const char* url, const char *port, const char *iotid, const char *iotp
 			printf(".");
 			}
 		}
+
 		for(i=0; i<5; i++){
 			splitdata[i] = "\0";
 		}
 		HAL_Delay(100);
 	}
 	printf("Subscribe Topic SUCCESS\n");
+
 }
 
 void publish(const char *topic,const char *masag)
@@ -89,13 +117,15 @@ void publish(const char *topic,const char *masag)
 	uint8_t state = 1;
 	uint8_t i,j=0;
 	char _data[50];
+	printf("\n");
+	HAL_Delay(100);
 	strcat(_data,"|4|1|3|");
 	strcat(_data,topic);
 	strcat(_data,"|");
 	strcat(_data,masag);
 	strcat(_data,"|\r");
 	printf("%s\n",_data);
-	Usart_SendString1(UART4, _data);
+	Usart_SendString1(USART3, _data);
 	while(state == 1){
 		splitString();
 		if(strcmp("4",splitdata[0]) == 0){
@@ -107,7 +137,7 @@ void publish(const char *topic,const char *masag)
 					printf("Failed to send message\n");
 				}
 			}
-		}else if(j == (uint8_t)100){
+		}else if(j == 100){
 			printf("time out");
 			state = 0;
 		}
@@ -119,18 +149,21 @@ void publish(const char *topic,const char *masag)
 	}
 	memset(_data,'\0',50);
 }
-
+//char arry[];
 void splitString(void){
 	uint8_t count = 0;
 	static struct sQueueData *p = NULL;
 	p = cuappDequeue();
+
 	if(p != NULL){
 		splitdata[count] = strtok((char*)p->data, "|");
+
 		while(splitdata[count])
 		{
 			splitdata[++count] = strtok(NULL, "|");
 		}
 	}
+
 	free(p);
 }
 
@@ -171,8 +204,9 @@ void loop(void)
 
 
 
-void connectWifi(const char *ssid , const char *pwd){
-char _wifi[100] = "";
+void connectWifi(const char *ssid , const char *pwd)
+{
+	char _wifi[100] = "";
 	uint8_t state = 1;
 	uint8_t i;
 	
@@ -182,10 +216,12 @@ char _wifi[100] = "";
 	strcat(_wifi,pwd);
 	strcat(_wifi,"|\r");
 	printf("%s\n",_wifi);
-	Usart_SendString1(UART4, _wifi);
+	Usart_SendString1(USART3, _wifi);
 	memset(_wifi,'\0',50);
+
 	while(state == 1){
 		splitString();
+		//printf("%c,%c,%c,%c,%c\n",*(splitdata[0]),*(splitdata[1]),*(splitdata[2]),*(splitdata[3]),*(splitdata[4]));
 		if(strcmp("2",splitdata[0]) == 0){
 			if(strcmp("3",splitdata[1]) == 0){
 				state=0;
@@ -194,6 +230,7 @@ char _wifi[100] = "";
 			}
 		}else{
 		printf(".");
+		HAL_Delay(100);
 		}
 		for(i=0; i<5; i++){
 			splitdata[i] = "\0";

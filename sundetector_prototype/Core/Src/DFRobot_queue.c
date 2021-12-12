@@ -12,6 +12,7 @@ void cuappEnqueue(uint8_t *pbuf, uint16_t len, uint16_t conn_id){
         return;
     }
     p->next = NULL;
+
     if(cumsgBufHead==NULL){
         cumsgBufHead=p;
         cumsgBufTail=p;
@@ -19,10 +20,13 @@ void cuappEnqueue(uint8_t *pbuf, uint16_t len, uint16_t conn_id){
         cumsgBufTail->next = p;
         cumsgBufTail = p;
     }
+
     p->len = len;
     p->handle = 0;
     memset(p->data,'\0',len+1);
     memcpy(p->data, pbuf, len);
+
+
 }
 
 struct sQueueData *cuappDequeue(void){
