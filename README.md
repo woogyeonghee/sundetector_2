@@ -12,9 +12,9 @@ sundetector
 
 - 4개의 조도센서와 2개의 서보모터를 활용하여 가장 빛을 따라 갈 수 있도록 구현 하였습니다
 
-- uart - wifi 를 통해 데이터를 전송할 예정입니다. (진행중)
+- usart - wifi모듈을 통해 데이터를 전송할 예정입니다.
 
-- 수집한 데이터의 원활한 처리를 위해 MQTT의 프로토콜을 사용 예정입니다. (진행예정)
+- 동시 여러 디바이스의 정보를 MQTT 프로토콜을 통해 수집 할 예정입니다. (진행예정)
 
 - MQTT - nodejs - mongodb 데이터를 저장할 예정입니다. (진행예정)
 
@@ -168,15 +168,17 @@ uint16_t Sensor_cal1(uint16_t x){
 }
  ~~~
  
- ## UART ring buffer
+ ## USART IRQHandler
 
 - 문제점 : DFRobot 에서 사용한 몇몇 함수들에 implicit declaration of function error 발생
 
 - 원인 : 사용한 함수들이 standard peripheral library ( spl ) 로 이루어져 있음 현재 st사에서 더이상 지원 안함
 
 - 해결 방법
-  - spl2ll-converter 사용 ( 관련내용 하단 url 참조 )
 
+![spl2ll](https://user-images.githubusercontent.com/88933098/145715190-9de035ad-fdcf-4ada-96ee-0dfdc161b194.JPG)
+
+  - spl2ll-converter 사용 ( 관련내용 하단 url 참조 )
   - https://woogyeonghee.github.io/firmware/2020-01-01-stm32_spl2ll.html
 
 ## sendmsg per 1 sec
@@ -196,9 +198,15 @@ HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(gTimerCnt == 1000)
 	{
 		gTimerCnt = 0;
-		printf ("Lf_Rt_pos=%4d, Tp_Dn_pos=%4d, ", Lf_Rt_pos,Tp_Dn_pos);
-		printf ("CDS1=%4d, CDS2=%4d, ", uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
-		printf ("CDS3=%4d, CDS4=%4d\n", uwADCxConvertedValue[2],uwADCxConvertedValue[3]);
+		char str1[100];
+		char str2[100];
+		char str3[100];
+		sprintf(str1,"Lf_Rt_pos=%4d, Tp_Dn_pos=%4d, ", Lf_Rt_pos,Tp_Dn_pos)
+		sprintf(str2,"CDS1=%4d, CDS2=%4d, ", uwADCxConvertedValue[0],uwADCxConvertedValue[1])
+		sprintf(str3,"CDS3=%4d, CDS4=%4d\n", uwADCxConvertedValue[2],uwADCxConvertedValue[3])
+		Usart_SendString1(USART3,str1);
+		Usart_SendString1(USART3,str2);
+		Usart_SendString1(USART3,str3);
 
 	}
 }
