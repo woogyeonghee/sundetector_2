@@ -14,11 +14,6 @@ sundetector
 
 - usart - wifi모듈을 통해 데이터를 전송할 예정입니다.
 
-- 동시 여러 디바이스의 정보를 MQTT 프로토콜을 통해 수집 할 예정입니다. (진행예정)
-
-- MQTT - nodejs - mongodb 데이터를 저장할 예정입니다. (진행예정)
-
-- 추가적으로 전압센서 모듈을 통해 배터리 충전율의 데이터를 logging 할 예정입니다.(진행예정)
 
 # 개발 환경
 
@@ -181,34 +176,5 @@ uint16_t Sensor_cal1(uint16_t x){
   - spl2ll-converter 사용 ( 관련내용 하단 url 참조 )
   - https://woogyeonghee.github.io/firmware/2020-01-01-stm32_spl2ll.html
 
-## sendmsg per 1 sec
 
-- 문제점 : while문 속 코드들의 처리 속도는 빨라야 한 반면에 data logging 은 1초에 1번씩만 보내도록 처리해야함
-
-- 해결방법
-  - timer interupt callback 함수를 구현
-
-
-~~~
-void
-HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	gTimerCnt++;
-	//same as HAL_Delay(1000) == 1 sec
-	if(gTimerCnt == 1000)
-	{
-		gTimerCnt = 0;
-		char str1[100];
-		char str2[100];
-		char str3[100];
-		sprintf(str1,"Lf_Rt_pos=%4d, Tp_Dn_pos=%4d, ", Lf_Rt_pos,Tp_Dn_pos)
-		sprintf(str2,"CDS1=%4d, CDS2=%4d, ", uwADCxConvertedValue[0],uwADCxConvertedValue[1])
-		sprintf(str3,"CDS3=%4d, CDS4=%4d\n", uwADCxConvertedValue[2],uwADCxConvertedValue[3])
-		Usart_SendString1(USART3,str1);
-		Usart_SendString1(USART3,str2);
-		Usart_SendString1(USART3,str3);
-
-	}
-}
-~~~
 
