@@ -258,7 +258,7 @@ void USART2_IRQHandler(void)
   /* USER CODE BEGIN USART2_IRQn 0 */
 	uint8_t r;
 
-	if(((LL_USART_IsEnabledIT_RXNE(USART2))&& (LL_USART_IsActiveFlag_RXNE(USART2))) != RESET)  //?��?���??????��
+	if(((LL_USART_IsEnabledIT_RXNE(USART2))&& (LL_USART_IsActiveFlag_RXNE(USART2))) != RESET)  //?��?���???????��
 	{
 		r =LL_USART_ReceiveData9(USART2);//(USART1->DR);	//读取?��?��?��?��?��?��
 		LL_USART_TransmitData9(USART2, r);
@@ -282,7 +282,7 @@ void USART3_IRQHandler(void)
 	{
 		Data_RX_BUF[Index] = LL_USART_ReceiveData9(USART3);
 		//check recv
-		//LL_USART_TransmitData9(USART2, Data_RX_BUF[Index]);
+		LL_USART_TransmitData9(USART2, Data_RX_BUF[Index]);
 		if(Data_RX_BUF[Index] == '\r'){
 			cuappEnqueue((uint8_t*)Data_RX_BUF,Index, 0);
 			Index = 0;

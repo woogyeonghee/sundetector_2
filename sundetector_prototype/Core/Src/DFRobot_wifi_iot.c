@@ -14,28 +14,7 @@ void Usart_SendString1(USART_TypeDef* USARTx, char *str)
 	}
 }
 
-void http()
-{
-	uint8_t i;
-	char _http[500];
-	strcat(_http,"|3|2|");
-	strcat(_http,"http://192.168.203.23:8080/");
-	strcat(_http,",");
-	strcat(_http,"hello");
-	strcat(_http,"|\r");
-	printf("%s\n",_http);
-	Usart_SendString1(USART3, _http);
-	while(1)
-	{
-		splitString();
-		printf("%c,%c,%c,%c,%c\n",*(splitdata[0]),*(splitdata[1]),*(splitdata[2]),*(splitdata[3]),*(splitdata[4]));
-		for(i=0; i<5; i++)
-		{
-			splitdata[i] = "\0";
-		}
-		HAL_Delay(100);
-	}
-}
+
 
 void mqtt(const char* url, const char *port, const char *iotid, const char *iotpwd , const char *topic)
 {
@@ -116,7 +95,8 @@ void publish(const char *topic,const char *masag)
 {
 	uint8_t state = 1;
 	uint8_t i,j=0;
-	char _data[50];
+	char _data[100];
+	memset(_data,'\0',100);
 	printf("\n");
 	HAL_Delay(100);
 	strcat(_data,"|4|1|3|");
@@ -147,9 +127,10 @@ void publish(const char *topic,const char *masag)
 		j++;
 		HAL_Delay(100);
 	}
-	memset(_data,'\0',50);
+	memset(_data,'\0',100);
 }
-//char arry[];
+
+
 void splitString(void){
 	uint8_t count = 0;
 	static struct sQueueData *p = NULL;

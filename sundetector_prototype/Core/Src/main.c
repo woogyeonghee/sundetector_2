@@ -40,12 +40,12 @@
 #define WIFIPWS      "12345678"
 
 
-//#define SERVER        "192.168.203.131"
-#define SERVER		  "iot.dfrobot.com.cn"
+#define SERVER        "iot.4irsw.com"
+//#define SERVER		  "iot.dfrobot.com"
 #define PORT          "1883"
-#define DEVICENAME    "K6q3Gl2nR"
-#define DEVICESECRET  "Ke33Glh7Rz"
-#define TOPIC         "uEjeMl2nR"
+#define DEVICENAME    "woo"
+#define DEVICESECRET  "12345678"
+#define TOPIC         "test"
 
 /* USER CODE END PD */
 
@@ -158,9 +158,16 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   connectWifi(WIFISSID,WIFIPWS);
-  http();
   mqtt(SERVER,PORT,DEVICENAME,DEVICESECRET,TOPIC);
-
+  //publish(TOPIC,"hello");
+  //loop();
+  //HAL_Delay(1000);
+  //connectWifi(WIFISSID,WIFIPWS);
+  //HAL_Delay(1000);
+  //mqtt(SERVER,PORT,DEVICENAME,DEVICESECRET,TOPIC);
+  //HAL_Delay(1000);
+  //publish(TOPIC,"world");
+  //loop();
   if(HAL_TIM_Base_Start_IT(&htim3)!=HAL_OK)
   {
 	  Error_Handler();
@@ -182,8 +189,9 @@ int main(void)
 
   while (1)
   {
+	  //publish(TOPIC,"HI TANG");
 	  const uint8_t Add_pos = 50;
-	  const uint8_t tol =50;
+	  const uint8_t tol =10;
 
 	  ADC_NOW_value[0] = Sensor_cal1(uwADCxConvertedValue[0]);
 	  ADC_NOW_value[1] = Sensor_cal2(uwADCxConvertedValue[1]);
@@ -240,10 +248,23 @@ int main(void)
 	  {
 		  Tp_Dn_pos=1300;
 	  }
-	  //printf ("hi\n ", Lf_Rt_pos,Tp_Dn_pos);
-	  //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
-	  //__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
+	  if(gTimerCnt > 3000)
+		{
+		    char str1[200]="\0";
+		    //sprintf (str1,"Lf_Rt_pos=%4d, Tp_Dn_pos=%4d, CDS1=%4d, CDS2=%4d, CDS3=%4d, CDS4=%4d",Lf_Rt_pos,Tp_Dn_pos,ADC_NOW_value[0],ADC_NOW_value[1],ADC_NOW_value[2],ADC_NOW_value[3]);
+		    uint16_t AVG = (ADC_NOW_value[0]+ADC_NOW_value[1]+ADC_NOW_value[2]+ADC_NOW_value[3])/4;
+		    sprintf (str1,"{\"Lf_Rt_pos\":%4d,\"Tp_Dn_pos\":%4d,\"AVG\":%4d}",Lf_Rt_pos,Tp_Dn_pos,AVG);
+		    //sprintf (str1,"{\"Lf_Rt_pos\":%4d,\"Tp_Dn_pos\":%4d}",Lf_Rt_pos,Tp_Dn_pos);
+		    publish(TOPIC,str1);
+			gTimerCnt = 0;
+
+			loop();
+
+		}
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, Lf_Rt_pos);
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, Tp_Dn_pos);
 	  HAL_Delay(50);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -679,16 +700,7 @@ void
 HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	gTimerCnt++;
-	//same as HAL_Delay(100)
-	if(gTimerCnt == 1000)
-	{
-		publish(TOPIC,"HI TANG");
-		gTimerCnt = 0;
-		printf ("Lf_Rt_pos=%4d, Tp_Dn_pos=%4d, ", Lf_Rt_pos,Tp_Dn_pos);
-		printf ("CDS1=%4d, CDS2=%4d, ", uwADCxConvertedValue[0],uwADCxConvertedValue[1]);
-		printf ("CDS3=%4d, CDS4=%4d\n", uwADCxConvertedValue[2],uwADCxConvertedValue[3]);
-		loop();
-	}
+
 }
 /* USER CODE END 4 */
 

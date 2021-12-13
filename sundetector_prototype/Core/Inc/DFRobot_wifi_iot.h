@@ -9,7 +9,6 @@
 #include "DFRobot_queue.h"
 #include "Uart_ring_buffer.h"
 
-void http();
 
 void Usart_SendString(USART_TypeDef*USARTx, char *str);
 
