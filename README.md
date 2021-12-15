@@ -181,3 +181,37 @@ uint16_t Sensor_cal1(uint16_t x){
 
 # FLOWCHART (sub func)
 
+![DSD](https://user-images.githubusercontent.com/88933098/146223727-c343e079-7d1f-4245-9587-137d57b12319.png)
+
+## WIFI MODULE 
+
+-  모듈 내에서 자체적으로 MQTT 기능이 있어 해당 메뉴얼을 참조하여 구현 하였습니다.
+-  링크 : https://iot.dfrobot.com/docs/
+
+## AWS
+
+-  어느 지역이든 와이파이만 연결 되었을 때 실행 가능 할 수 있게 끔 구현하기 위해서 상시 작동되는 서버의 IP, 도메인 주소가 필요 하여 aws를 선택하였습니다..
+
+## MQTT 
+
+- 프로젝트 진행 중에 MQTT 포트를 열어줘야 하여서 MQTT 인바운드 규칙에 1883-1884 포트를 열어주었습니다.
+- WIFI 모듈에서 제공 하는 메뉴얼에 따르면 MQTT connect를 위해선 username 및 passwd 가 필요하여 cmd로 테스트 진행시 아래와 같은 명령어 옵션을 사용하였습니다
+
+~~~
+//sub
+mosquitto_sub -h 3.38.154.143 -t test -u woo -P 12345678
+
+//pub
+mosquitto_pub -h 3.38.154.143 -t test -u woo -P 12345678 -m "hello world"
+~~~
+
+## NODEJS
+
+- 이역시 구독을 하기 위해 mqtt connect 옵션에 username 과 passwd를 추가 하였습니다.
+- string 파일을 json형태로 변환 하였습니다.
+- mongoose 라는 패키지를 통해 mongodb와 연동 할 수 있게 하였습니다.
+
+## mongodb
+
+- nodejs에서 데이터를 받도록 하였습니다.
+
