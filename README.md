@@ -8,11 +8,7 @@ sundetector
 
 # 프로젝트 개요
 
-- stm32 cortex-m4를 활용한 solar detector 라는 주제로 프로젝트를 진행 하였습니다
-
-- 4개의 조도센서와 2개의 서보모터를 활용하여 가장 빛을 따라 갈 수 있도록 구현 하였습니다
-
-- usart - wifi모듈을 통해 데이터를 전송할 예정입니다.
+- stm32 cortex-m4를 활용한 solar detector 라는 주제로 프로젝트를 진행 하였습니다. 태양광 추적 시스템으로 상하, 좌우 의 pos 값과 cds 센서(평균값)을 aws 서버(브로커 역할)을 통해 데이터를 저장 시킬 수 있는 시스템을 구현하였습니다.
 
 
 # 개발 환경
@@ -25,6 +21,9 @@ sundetector
 
 - ide : stm32cubeide, vscode
 
+- famework : nodejs
+
+- 통신 프로토콜 : mqtt
 
 # HW 구성
 
@@ -59,9 +58,11 @@ sundetector
   - sendmsg per 1 sec
 
 
-- data communication sub func
+- data communication & sub func
 
   - MQTT
+  
+  - aws
 
   - node js
 
@@ -76,11 +77,9 @@ sundetector
 
 - main 기능 구현하기 ( 1주 )
 
-- 통신 관련 기능 구현하기 (예정)
+- 통신 관련 기능 구현하기 (1 주)
 
-- 데이터 베이스 저장 (예정)
-
-- 전압 측정-> 배터리 충전율 구현 (예정)
+- 데이터 베이스 저장 ( 3일 )
 
 # 외관 
 
@@ -93,9 +92,10 @@ sundetector
 
 [![Video Label](https://user-images.githubusercontent.com/88933098/145672468-0b19eb3a-15f9-4b47-9024-c06487d4637f.png)](https://youtu.be/SaPicVdNIJQ)
 
-### 데이터 수집 영상 (예정)
+### 데이터 수집 영상
 <br/>
 
+[![Video Label](https://youtu.be/AV951ft0zV4)
 
 
 
@@ -173,8 +173,11 @@ uint16_t Sensor_cal1(uint16_t x){
 
 ![spl2ll](https://user-images.githubusercontent.com/88933098/145715190-9de035ad-fdcf-4ada-96ee-0dfdc161b194.JPG)
 
+
+
   - spl2ll-converter 사용 ( 관련내용 하단 url 참조 )
   - https://woogyeonghee.github.io/firmware/2020-01-01-stm32_spl2ll.html
 
 
+# FLOWCHART (sub func)
 
