@@ -95,7 +95,7 @@ sundetector
 ### 데이터 수집 영상
 <br/>
 
-[![Video Label](https://youtu.be/AV951ft0zV4)
+[![Video Label](https://github.com/woogyeonghee/sundetector_2/issues/4#issue-1081218317)](https://youtu.be/AV951ft0zV4)
 
 
 
