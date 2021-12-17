@@ -18,6 +18,7 @@ sundetector
 - os : window
 
 - library : HAL && LL, DFrobot 제공 wifi 관련 라이브러리
+- https://github.com/DFRobot/DFRobot_WIFI_I0T_Module_STM32
 
 - ide : stm32cubeide, vscode
 
