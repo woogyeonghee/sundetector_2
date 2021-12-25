@@ -93,7 +93,7 @@ sundetector
 
 [![Video Label](https://user-images.githubusercontent.com/88933098/145672468-0b19eb3a-15f9-4b47-9024-c06487d4637f.png)](https://youtu.be/SaPicVdNIJQ)
 
-### 데이터 수집 영상
+### 데이터 수집 영상 (이미지 클릭후 영상으로 이동)
 <br/>
 
 [![Video Label](https://user-images.githubusercontent.com/88933098/146226442-611b362b-6959-4efa-a561-e1bfdfdc4839.png)](https://youtu.be/AV951ft0zV4)
